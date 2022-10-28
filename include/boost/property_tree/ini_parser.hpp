@@ -211,11 +211,12 @@ namespace boost { namespace property_tree { namespace ini_parser
                     }
                     continue;
                 }
-                stream << it->first << Ch('=')
+                stream << it->first << Ch(' ') << Ch('=') << Ch(' ')
                     << it->second.template get_value<
                         std::basic_string<Ch> >()
                     << Ch('\n');
             }
+            stream << Ch('\n');
         }
 
         template <typename Ptree>
