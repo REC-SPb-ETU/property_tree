@@ -129,8 +129,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                         std::make_pair(key, Ptree()))->second;
                     if (!lastComment.empty())
                     {
-                        section->put(commentKey, lastComment);
-                        lastComment.clear();
+                        lastComment += commentKey;
                     }
                 }
                 else
@@ -272,7 +271,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                                   const Ptree& pt,
                                   bool throw_on_children,
                                   const typename Ptree::key_type& commentKey,
-                                  const typename Ptree::key_type& commentStart)
+                                  const typename Ptree::key_type& commentStart, std::string sectionName = "")
         {
             typedef typename Ptree::key_type::value_type Ch;
             for (typename Ptree::const_iterator it = pt.begin(), end = pt.end();
@@ -290,21 +289,42 @@ namespace boost { namespace property_tree { namespace ini_parser
                         //only two depth-levels are allowd in INI-files ... but we also have to filter out the additional .comment nodes
                         if (throw_on_children)
                         {
-                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                            BOOST_PROPERTY_TREE_THROW(ini_parser_error(
                                 "ptree is too deep (only two depth steps alowed in INI files)", "", 0));
+                        }
+                        continue;
                     }
-                    continue;
-                }
-                    if (comment)
+                    // first parameter of section, write section
+                    if(it == pt.begin() && sectionName != "")
                     {
-                        // ... if it exists: output the comment
-                        write_comment<Ptree>(stream, *comment, commentStart);
+                        // empty lines in front of a new section to better separate it from other sections
+                        if(stream.tellp() != 0)
+                            stream  << Ch('\n');
+
+                        if (comment)
+                        {
+                            std::string commentStr = *comment;
+                            if(commentStr.find(commentKey) != std::string::npos)
+                                write_comment<Ptree>(stream, commentStr.substr(0, commentStr.find(commentKey)), commentStart);
+                        }
+
+                        stream << Ch('[') << sectionName << Ch(']') << Ch('\n');
                     }
-                stream << it->first << Ch(' ') << Ch('=') << Ch(' ')
-                    << it->second.template get_value<
-                        std::basic_string<Ch> >()
-                    << Ch('\n');
-            }
+                    // write parameter
+                    if (comment) {
+                        std::string commentStr = *comment;
+                        if(commentStr.find(commentKey + '\n') != std::string::npos)
+                            write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length() + 1), commentStart);
+                        else if(commentStr.find(commentKey) != std::string::npos)
+                            write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length()), commentStart);
+                        else
+                            write_comment<Ptree>(stream, commentStr, commentStart);
+                    }
+                    stream << it->first << Ch(' ') << Ch('=') << Ch(' ')
+                        << it->second.template get_value<
+                            std::basic_string<Ch> >()
+                        << Ch('\n');
+                }
             }
         }
 
@@ -336,22 +356,8 @@ namespace boost { namespace property_tree { namespace ini_parser
                     if (!it->second.data().empty())
                         BOOST_PROPERTY_TREE_THROW(ini_parser_error(
                             "mixed data and children", "", 0));
-                    // empty lines in front of a new section to better separate it from other sections
-                    stream  << Ch('\n');
-                    // check for existence of comment node
-                    boost::optional<typename Ptree::key_type> comment = pt.template get_optional<typename Ptree::key_type>(it->first + "." + commentKey);
-                    if (comment)
-                    {
-                        std::string c = *comment;
-                        // eat linebreak from start of comment to account for the two explicit \n inserted above!
-                        while (!c.empty() && c[0] == Ch('\n'))
-                            c = c.substr(1);
-                        // ... if it exists: output the comment
-                        if (!c.empty())
-                            write_comment<Ptree>(stream, c, commentStart);
-                    }
-                    stream << Ch('[') << it->first << Ch(']') << Ch('\n');
-                    write_keys(stream, it->second, true, commentKey, commentStart);
+
+                    write_keys(stream, it->second, true, commentKey, commentStart, it->first);
                 }
             }
         }
