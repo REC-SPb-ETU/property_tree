@@ -277,54 +277,50 @@ namespace boost { namespace property_tree { namespace ini_parser
             for (typename Ptree::const_iterator it = pt.begin(), end = pt.end();
                  it != end; ++it)
             {
-                if (it->first != commentKey)
+                // check for existence of comment node
+                boost::optional<typename Ptree::key_type> comment = it->second.template get_optional<typename Ptree::key_type>(commentKey);
+
+                if (!it->second.empty() && !(it->second.size() == 1 && comment))
                 {
-                    // We ignore the ".comment"-nodes, as these have special meaning!
-
-                    // check for existence of comment node
-                    boost::optional<typename Ptree::key_type> comment = it->second.template get_optional<typename Ptree::key_type>(commentKey);
-
-                    if (!it->second.empty() && !(it->second.size() == 1 && comment))
+                    //only two depth-levels are allowd in INI-files ... but we also have to filter out the additional .comment nodes
+                    if (throw_on_children)
                     {
-                        //only two depth-levels are allowd in INI-files ... but we also have to filter out the additional .comment nodes
-                        if (throw_on_children)
-                        {
-                            BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                                "ptree is too deep (only two depth steps alowed in INI files)", "", 0));
-                        }
-                        continue;
+                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                                                      "ptree is too deep (only two depth steps alowed in INI files)", "", 0));
                     }
-                    // first parameter of section, write section
-                    if(it == pt.begin() && sectionName != "")
-                    {
-                        // empty lines in front of a new section to better separate it from other sections
-                        if(stream.tellp() != 0)
-                            stream  << Ch('\n');
-
-                        if (comment)
-                        {
-                            std::string commentStr = *comment;
-                            if(commentStr.find(commentKey) != std::string::npos)
-                                write_comment<Ptree>(stream, commentStr.substr(0, commentStr.find(commentKey)), commentStart);
-                        }
-
-                        stream << Ch('[') << sectionName << Ch(']') << Ch('\n');
-                    }
-                    // write parameter
-                    if (comment) {
-                        std::string commentStr = *comment;
-                        if(commentStr.find(commentKey + '\n') != std::string::npos)
-                            write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length() + 1), commentStart);
-                        else if(commentStr.find(commentKey) != std::string::npos)
-                            write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length()), commentStart);
-                        else
-                            write_comment<Ptree>(stream, commentStr, commentStart);
-                    }
-                    stream << it->first << Ch(' ') << Ch('=') << Ch(' ')
-                        << it->second.template get_value<
-                            std::basic_string<Ch> >()
-                        << Ch('\n');
+                    continue;
                 }
+                // first parameter of section, write section
+                if (it == pt.begin() && sectionName != "")
+                {
+                    // empty lines in front of a new section to better separate it from other sections
+                    if (stream.tellp() != 0)
+                        stream  << Ch('\n');
+
+                    if (comment)
+                    {
+                        std::string commentStr = *comment;
+                        if(commentStr.find(commentKey) != std::string::npos)
+                            write_comment<Ptree>(stream, commentStr.substr(0, commentStr.find(commentKey)), commentStart);
+                    }
+
+                    stream << Ch('[') << sectionName << Ch(']') << Ch('\n');
+                }
+                // write parameter
+                if (comment)
+                {
+                    std::string commentStr = *comment;
+                    if(commentStr.find(commentKey + '\n') != std::string::npos)
+                        write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length() + 1), commentStart);
+                    else if(commentStr.find(commentKey) != std::string::npos)
+                        write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length()), commentStart);
+                    else
+                        write_comment<Ptree>(stream, commentStr, commentStart);
+                }
+                stream << it->first << Ch(' ') << Ch('=') << Ch(' ')
+                       << it->second.template get_value<
+                          std::basic_string<Ch> >()
+                       << Ch('\n');
             }
         }
 
