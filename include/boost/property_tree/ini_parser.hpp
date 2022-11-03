@@ -22,10 +22,29 @@
 
 namespace boost { namespace property_tree { namespace ini_parser
 {
-    template <class Str>
-    inline Str comment_key()
+    template<typename StringType>
+    inline StringType comment_key()
     {
-        return Str("inicomment");
+        std::basic_ostringstream<typename StringType::value_type> stm;
+        stm << stm.widen('i');
+        stm << stm.widen('n');
+        stm << stm.widen('i');
+        stm << stm.widen('c');
+        stm << stm.widen('o');
+        stm << stm.widen('m');
+        stm << stm.widen('m');
+        stm << stm.widen('e');
+        stm << stm.widen('n');
+        stm << stm.widen('t');
+
+    	return stm.str();
+    }
+
+    template<typename CharType>
+    inline CharType comment_start_character()
+    {
+        std::basic_ostringstream<CharType> stm;
+    	return stm.widen('#');
     }
 
     /**
@@ -74,10 +93,10 @@ namespace boost { namespace property_tree { namespace ini_parser
                     typename Ptree::key_type::value_type> &stream,
                   Ptree &pt)
     {
-        typedef typename Ptree::key_type::value_type Ch;
-        typedef std::basic_string<Ch> Str;
+        typedef typename Ptree::key_type Str;
+        typedef typename Str::value_type Ch;
         const Ch semicolon = stream.widen(';');
-        const Ch hash = stream.widen('#');
+        const Ch hash = comment_start_character<Ch>();
         const Ch lbracket = stream.widen('[');
         const Ch rbracket = stream.widen(']');
         const Str commentKey = comment_key<Str>();
@@ -220,7 +239,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                                typename Ptree::key_type::value_type
                            > &stream,
                            const typename Ptree::key_type& comment,
-                           const typename Ptree::key_type& commentStart)
+                           const typename Ptree::key_type::value_type& commentStart)
         {
             typedef typename Ptree::key_type::value_type Ch;
             if (comment.empty())
@@ -271,14 +290,16 @@ namespace boost { namespace property_tree { namespace ini_parser
                                   const Ptree& pt,
                                   bool throw_on_children,
                                   const typename Ptree::key_type& commentKey,
-                                  const typename Ptree::key_type& commentStart, std::string sectionName = "")
+                                  const typename Ptree::key_type::value_type& commentStart,
+								  const typename Ptree::key_type& sectionName = {})
         {
             typedef typename Ptree::key_type::value_type Ch;
+            typedef typename Ptree::key_type Str;
             for (typename Ptree::const_iterator it = pt.begin(), end = pt.end();
                  it != end; ++it)
             {
                 // check for existence of comment node
-                boost::optional<typename Ptree::key_type> comment = it->second.template get_optional<typename Ptree::key_type>(commentKey);
+                boost::optional<Str> comment = it->second.template get_optional<Str>(commentKey);
 
                 if (!it->second.empty() && !(it->second.size() == 1 && comment))
                 {
@@ -291,7 +312,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                     continue;
                 }
                 // first parameter of section, write section
-                if (it == pt.begin() && sectionName != "")
+                if (it == pt.begin() && sectionName != Str{})
                 {
                     // empty lines in front of a new section to better separate it from other sections
                     if (stream.tellp() != 0)
@@ -299,8 +320,8 @@ namespace boost { namespace property_tree { namespace ini_parser
 
                     if (comment)
                     {
-                        std::string commentStr = *comment;
-                        if(commentStr.find(commentKey) != std::string::npos)
+                        Str commentStr = *comment;
+                        if(commentStr.find(commentKey) != Str::npos)
                             write_comment<Ptree>(stream, commentStr.substr(0, commentStr.find(commentKey)), commentStart);
                     }
 
@@ -309,10 +330,10 @@ namespace boost { namespace property_tree { namespace ini_parser
                 // write parameter
                 if (comment)
                 {
-                    std::string commentStr = *comment;
-                    if(commentStr.find(commentKey + '\n') != std::string::npos)
+                    Str commentStr = *comment;
+                    if(commentStr.find(commentKey + Ch('\n')) != Str::npos)
                         write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length() + 1), commentStart);
-                    else if(commentStr.find(commentKey) != std::string::npos)
+                    else if(commentStr.find(commentKey) != Str::npos)
                         write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length()), commentStart);
                     else
                         write_comment<Ptree>(stream, commentStr, commentStart);
@@ -330,7 +351,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                                   > &stream,
                                   const Ptree& pt,
                                   const typename Ptree::key_type& commentKey,
-                                  const typename Ptree::key_type& commentStart)
+                                  const typename Ptree::key_type::value_type& commentStart)
         {
             write_keys(stream, pt, false, commentKey, commentStart);
         }
@@ -341,7 +362,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                             > &stream,
                             const Ptree& pt,
                             const typename Ptree::key_type& commentKey,
-                            const typename Ptree::key_type& commentStart)
+                            const typename Ptree::key_type::value_type& commentStart)
         {
             typedef typename Ptree::key_type::value_type Ch;
             for (typename Ptree::const_iterator it = pt.begin(), end = pt.end();
@@ -385,7 +406,7 @@ namespace boost { namespace property_tree { namespace ini_parser
         (void)flags;
 
         const typename Ptree::key_type commentKey = comment_key<typename Ptree::key_type>();
-        const typename Ptree::key_type commentStart = "#";
+        const typename Ptree::key_type::value_type commentStart = comment_start_character<typename Ptree::key_type::value_type>();
 
         if (!pt.data().empty())
             BOOST_PROPERTY_TREE_THROW(ini_parser_error(
