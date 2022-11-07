@@ -46,6 +46,7 @@ const char *ok_data_4 =
 
 // Correct data
 const char *ok_data_5 = 
+    "# Comment\n"
     "Key1=Data1\n"             // No section
     "Key2=Data2\n";
 
@@ -133,7 +134,7 @@ void test_ini_parser()
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
         ReadFunc(), WriteFunc(), ok_data_5, NULL,
-        "testok5.ini", NULL, "testok5out.ini", 3, 10, 8
+        "testok5.ini", NULL, "testok5out.ini", 4, 18, 18
     );
 
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>

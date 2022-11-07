@@ -26,18 +26,16 @@ namespace boost { namespace property_tree { namespace ini_parser
     inline StringType comment_key()
     {
         std::basic_ostringstream<typename StringType::value_type> stm;
-        stm << stm.widen('i');
-        stm << stm.widen('n');
-        stm << stm.widen('i');
-        stm << stm.widen('c');
-        stm << stm.widen('o');
-        stm << stm.widen('m');
-        stm << stm.widen('m');
-        stm << stm.widen('e');
-        stm << stm.widen('n');
-        stm << stm.widen('t');
+        stm << "inicomment";
+        return stm.str();
+    }
 
-    	return stm.str();
+    template<typename StringType>
+    inline StringType section_comment_key()
+    {
+        std::basic_ostringstream<typename StringType::value_type> stm;
+        stm << "inicomment_section";
+        return stm.str();
     }
 
     template<typename CharType>
@@ -100,7 +98,7 @@ namespace boost { namespace property_tree { namespace ini_parser
         const Ch lbracket = stream.widen('[');
         const Ch rbracket = stream.widen(']');
         const Str commentKey = comment_key<Str>();
-        const Str sectionCommentKey = commentKey + Ch('_') + Ch('s') + Ch('e') + Ch('c') + Ch('t') + Ch('i') + Ch('o') + Ch('n');
+        const Str sectionCommentKey = section_comment_key<Str>();
 
         Ptree local;
         unsigned long line_no = 0;
@@ -303,7 +301,7 @@ namespace boost { namespace property_tree { namespace ini_parser
         {
             typedef typename Ptree::key_type::value_type Ch;
             typedef typename Ptree::key_type Str;
-            Str sectionCommentKey = commentKey + Ch('_') + Ch('s') + Ch('e') + Ch('c') + Ch('t') + Ch('i') + Ch('o') + Ch('n');
+            const Str sectionCommentKey = section_comment_key<Str>();
             for (typename Ptree::const_iterator it = pt.begin(), end = pt.end();
                  it != end; ++it)
             {
@@ -364,11 +362,15 @@ namespace boost { namespace property_tree { namespace ini_parser
                             const typename Ptree::key_type::value_type& commentStart)
         {
             typedef typename Ptree::key_type::value_type Ch;
+            typedef typename Ptree::key_type Str;
             for (typename Ptree::const_iterator it = pt.begin(), end = pt.end();
                  it != end; ++it)
             {
+                boost::optional<Str> comment = it->second.template get_optional<Str>(commentKey);
                 if (!it->second.empty()) {
                     check_dupes(it->second);
+                    if(!it->second.data().empty() && comment) // top_level_key with comment
+                      continue;
                     if (!it->second.data().empty())
                         BOOST_PROPERTY_TREE_THROW(ini_parser_error(
                             "mixed data and children", "", 0));
