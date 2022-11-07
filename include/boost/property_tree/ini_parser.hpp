@@ -100,12 +100,14 @@ namespace boost { namespace property_tree { namespace ini_parser
         const Ch lbracket = stream.widen('[');
         const Ch rbracket = stream.widen(']');
         const Str commentKey = comment_key<Str>();
+        const Str sectionCommentKey = commentKey + Ch('_') + Ch('s') + Ch('e') + Ch('c') + Ch('t') + Ch('i') + Ch('o') + Ch('n');
 
         Ptree local;
         unsigned long line_no = 0;
         Ptree *section = 0;
         Str line;
         Str lastComment;
+        Str sectionComment;
 
         // For all lines
         while (stream.good())
@@ -148,7 +150,8 @@ namespace boost { namespace property_tree { namespace ini_parser
                         std::make_pair(key, Ptree()))->second;
                     if (!lastComment.empty())
                     {
-                        lastComment += commentKey;
+                        sectionComment = lastComment;
+                        lastComment.clear();
                     }
                 }
                 else
@@ -173,6 +176,11 @@ namespace boost { namespace property_tree { namespace ini_parser
                     {
                         section->put(commentKey, lastComment);
                         lastComment.clear();
+                    }
+                    if(!sectionComment.empty())
+                    {
+                        section->put(sectionCommentKey, sectionComment);
+                        sectionComment.clear();
                     }
                 }
             }
@@ -295,13 +303,15 @@ namespace boost { namespace property_tree { namespace ini_parser
         {
             typedef typename Ptree::key_type::value_type Ch;
             typedef typename Ptree::key_type Str;
+            Str sectionCommentKey = commentKey + Ch('_') + Ch('s') + Ch('e') + Ch('c') + Ch('t') + Ch('i') + Ch('o') + Ch('n');
             for (typename Ptree::const_iterator it = pt.begin(), end = pt.end();
                  it != end; ++it)
             {
                 // check for existence of comment node
                 boost::optional<Str> comment = it->second.template get_optional<Str>(commentKey);
+                boost::optional<Str> sectionComment = it->second.template get_optional<Str>(sectionCommentKey);
 
-                if (!it->second.empty() && !(it->second.size() == 1 && comment))
+                if (!it->second.empty() && !(it->second.size() == 1 && comment) && !(it->second.size() <= 2 && sectionComment))
                 {
                     //only two depth-levels are allowd in INI-files ... but we also have to filter out the additional .comment nodes
                     if (throw_on_children)
@@ -318,26 +328,15 @@ namespace boost { namespace property_tree { namespace ini_parser
                     if (stream.tellp() != 0)
                         stream  << Ch('\n');
 
-                    if (comment)
-                    {
-                        Str commentStr = *comment;
-                        if(commentStr.find(commentKey) != Str::npos)
-                            write_comment<Ptree>(stream, commentStr.substr(0, commentStr.find(commentKey)), commentStart);
-                    }
+                    if (sectionComment)
+                        write_comment<Ptree>(stream, *sectionComment, commentStart);
 
                     stream << Ch('[') << sectionName << Ch(']') << Ch('\n');
                 }
                 // write parameter
                 if (comment)
-                {
-                    Str commentStr = *comment;
-                    if(commentStr.find(commentKey + Ch('\n')) != Str::npos)
-                        write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length() + 1), commentStart);
-                    else if(commentStr.find(commentKey) != Str::npos)
-                        write_comment<Ptree>(stream, commentStr.substr(commentStr.find(commentKey) + commentKey.length()), commentStart);
-                    else
-                        write_comment<Ptree>(stream, commentStr, commentStart);
-                }
+                    write_comment<Ptree>(stream, *comment, commentStart);
+
                 stream << it->first << Ch(' ') << Ch('=') << Ch(' ')
                        << it->second.template get_value<
                           std::basic_string<Ch> >()

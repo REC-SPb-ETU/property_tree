@@ -20,14 +20,14 @@ using namespace boost::property_tree;
 // Correct data
 const char *ok_data_1 = 
     "\n"
-    "; Comment\n"
+    "; Comment section\n"
     "[Section1]\n"
     "\t   \t; Comment\n"
     "  Key1=Data1\n"
     "            \n"
     "   Key2   =   Data2\n"
     "Key 3     =      Data 3  \n"
-    "Key4=Data4\n"
+    "Key4=Data4 #comment\n"
     "[Section2] ;Comment\n"
     "\t   \tKey1=Data4\n";
 
@@ -108,38 +108,38 @@ void test_ini_parser()
 {
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_1, NULL, 
-        "testok1.ini", NULL, "testok1out.ini", 8, 26, 37
+        ReadFunc(), WriteFunc(), ok_data_1, NULL,
+        "testok1.ini", NULL, "testok1out.ini", 10, 59, 65
     );
     
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_2, NULL, 
+        ReadFunc(), WriteFunc(), ok_data_2, NULL,
         "testok2.ini", NULL, "testok2out.ini", 3, 5, 12
     );
 
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_3, NULL, 
+        ReadFunc(), WriteFunc(), ok_data_3, NULL,
         "testok3.ini", NULL, "testok3out.ini", 1, 0, 0
     );
 
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_4, NULL, 
+        ReadFunc(), WriteFunc(), ok_data_4, NULL,
         "testok4.ini", NULL, "testok4out.ini", 1, 0, 0
     );
 
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_5, NULL, 
+        ReadFunc(), WriteFunc(), ok_data_5, NULL,
         "testok5.ini", NULL, "testok5out.ini", 3, 10, 8
     );
 
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_6, NULL, 
-        "testok6.ini", NULL, "testok6out.ini", 3, 5, 12
+        ReadFunc(), WriteFunc(), ok_data_6, NULL,
+        "testok6.ini", NULL, "testok6out.ini", 4, 13, 30
     );
 
     generic_parser_test_error<Ptree, ReadFunc, WriteFunc, ini_parser_error>
