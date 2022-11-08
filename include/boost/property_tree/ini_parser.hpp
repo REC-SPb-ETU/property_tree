@@ -22,28 +22,6 @@
 
 namespace boost { namespace property_tree { namespace ini_parser
 {
-    template<typename StringType>
-    inline StringType comment_key()
-    {
-        std::basic_ostringstream<typename StringType::value_type> stm;
-        stm << "inicomment";
-        return stm.str();
-    }
-
-    template<typename StringType>
-    inline StringType section_comment_key()
-    {
-        std::basic_ostringstream<typename StringType::value_type> stm;
-        stm << "inicomment_section";
-        return stm.str();
-    }
-
-    template<typename CharType>
-    inline CharType comment_start_character()
-    {
-        std::basic_ostringstream<CharType> stm;
-    	return stm.widen('#');
-    }
 
     /**
      * Determines whether the @c flags are valid for use with the ini_parser.
@@ -75,154 +53,35 @@ namespace boost { namespace property_tree { namespace ini_parser
         }
     };
 
-    /**
-     * Read INI from a the given stream and translate it to a property tree.
-     * @note Clears existing contents of property tree. In case of error
-     *       the property tree is not modified.
-     * @throw ini_parser_error If a format violation is found.
-     * @param stream Stream from which to read in the property tree.
-     * @param[out] pt The property tree to populate.
-     *
-     * Comments will be stored in the propertyTree alongside the actual property
-     * in an additional entry \c key.inicomment (wie von comment_key() returned).
-     */
-    template<class Ptree>
-    void read_ini(std::basic_istream<
-                    typename Ptree::key_type::value_type> &stream,
-                  Ptree &pt)
-    {
-        typedef typename Ptree::key_type Str;
-        typedef typename Str::value_type Ch;
-        const Ch semicolon = stream.widen(';');
-        const Ch hash = comment_start_character<Ch>();
-        const Ch lbracket = stream.widen('[');
-        const Ch rbracket = stream.widen(']');
-        const Str commentKey = comment_key<Str>();
-        const Str sectionCommentKey = section_comment_key<Str>();
-
-        Ptree local;
-        unsigned long line_no = 0;
-        Ptree *section = 0;
-        Str line;
-        Str lastComment;
-        Str sectionComment;
-
-        // For all lines
-        while (stream.good())
-        {
-
-            // Get line from stream
-            ++line_no;
-            std::getline(stream, line);
-            if (!stream.good() && !stream.eof())
-                BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                    "read error", "", line_no));
-
-            // If line is non-empty
-            line = property_tree::detail::trim(line, stream.getloc());
-            if (!line.empty())
-            {
-                // Comment, section or key?
-                if (line[0] == semicolon || line[0] == hash)
-                {
-                    // Save comments to intermediate storage
-                    if (!lastComment.empty())
-                        lastComment += Ch('\n');
-                    lastComment += line.substr(1);
-                }
-                else if (line[0] == lbracket)
-                {
-                    // If the previous section was empty, drop it again.
-                    if (section && section->empty())
-                        local.pop_back();
-                    typename Str::size_type end = line.find(rbracket);
-                    if (end == Str::npos)
-                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                            "unmatched '['", "", line_no));
-                    Str key = property_tree::detail::trim(
-                        line.substr(1, end - 1), stream.getloc());
-                    if (local.find(key) != local.not_found())
-                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                            "duplicate section name", "", line_no));
-                    section = &local.push_back(
-                        std::make_pair(key, Ptree()))->second;
-                    if (!lastComment.empty())
-                    {
-                        sectionComment = lastComment;
-                        lastComment.clear();
-                    }
-                }
-                else
-                {
-                    Ptree &container = section ? *section : local;
-                    typename Str::size_type eqpos = line.find(Ch('='));
-                    if (eqpos == Str::npos)
-                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                            "'=' character not found in line", "", line_no));
-                    if (eqpos == 0)
-                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                            "key expected", "", line_no));
-                    Str key = property_tree::detail::trim(
-                        line.substr(0, eqpos), stream.getloc());
-                    Str data = property_tree::detail::trim(
-                        line.substr(eqpos + 1, Str::npos), stream.getloc());
-                    if (container.find(key) != container.not_found())
-                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                            "duplicate key name", "", line_no));
-                    Ptree* section = &container.push_back(std::make_pair(key, Ptree(data)))->second;
-                    if (!lastComment.empty())
-                    {
-                        section->put(commentKey, lastComment);
-                        lastComment.clear();
-                    }
-                    if(!sectionComment.empty())
-                    {
-                        section->put(sectionCommentKey, sectionComment);
-                        sectionComment.clear();
-                    }
-                }
-            }
-        }
-        // If the last section was empty, drop it again.
-        if (section && section->empty())
-            local.pop_back();
-
-        // Swap local ptree with result ptree
-        pt.swap(local);
-
-    }
-
-    /**
-     * Read INI from a the given file and translate it to a property tree.
-     * @note Clears existing contents of property tree.  In case of error the
-     *       property tree unmodified.
-     * @throw ini_parser_error In case of error deserializing the property tree.
-     * @param filename Name of file from which to read in the property tree.
-     * @param[out] pt The property tree to populate.
-     * @param loc The locale to use when reading in the file contents.
-     */
-    template<class Ptree>
-    void read_ini(const std::string &filename, 
-                  Ptree &pt,
-                  const std::locale &loc = std::locale())
-    {
-        std::basic_ifstream<typename Ptree::key_type::value_type>
-            stream(filename.c_str());
-        if (!stream)
-            BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                "cannot open file", filename, 0));
-        stream.imbue(loc);
-        try {
-            read_ini(stream, pt);
-        }
-        catch (ini_parser_error &e) {
-            BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                e.message(), filename, e.line()));
-        }
-    }
-
     namespace detail
     {
+        template<typename StringType>
+        inline StringType make_string(const char* string)
+        {
+            std::basic_ostringstream<typename StringType::value_type> stm;
+            stm << string;
+            return stm.str();
+        }
+
+        template<typename StringType>
+        inline StringType comment_key()
+        {
+            return make_string<StringType>("inicomment");
+        }
+
+        template<typename StringType>
+        inline StringType section_comment_key()
+        {
+            return make_string<StringType>("inicomment_section");
+        }
+
+        template<typename CharType>
+        inline CharType comment_start_character()
+        {
+            std::basic_ostringstream<CharType> stm;
+            return stm.widen('#');
+        }
+
         template<class Ptree>
         void check_dupes(const Ptree &pt)
         {
@@ -297,7 +156,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                                   bool throw_on_children,
                                   const typename Ptree::key_type& commentKey,
                                   const typename Ptree::key_type::value_type& commentStart,
-								  const typename Ptree::key_type& sectionName = {})
+                                  const typename Ptree::key_type& sectionName = {})
         {
             typedef typename Ptree::key_type::value_type Ch;
             typedef typename Ptree::key_type Str;
@@ -309,16 +168,16 @@ namespace boost { namespace property_tree { namespace ini_parser
                 boost::optional<Str> comment = it->second.template get_optional<Str>(commentKey);
                 boost::optional<Str> sectionComment = it->second.template get_optional<Str>(sectionCommentKey);
 
-                if (!it->second.empty() && !(it->second.size() == 1 && comment) && !(it->second.size() <= 2 && sectionComment))
-                {
-                    //only two depth-levels are allowd in INI-files ... but we also have to filter out the additional .comment nodes
-                    if (throw_on_children)
-                    {
+                int commentCount = bool(comment) + bool(sectionComment);
+                if (it->second.size() != commentCount) {
+                    //only two depth-levels are allowed in INI-files ... but we also have to filter out the additional .comment nodes
+                    if (throw_on_children) {
                         BOOST_PROPERTY_TREE_THROW(ini_parser_error(
-                                                      "ptree is too deep (only two depth steps alowed in INI files)", "", 0));
+                            "ptree is too deep (only two depth steps allowed in INI files)", "", 0));
                     }
                     continue;
                 }
+
                 // first parameter of section, write section
                 if (it == pt.begin() && sectionName != Str{})
                 {
@@ -370,7 +229,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                 if (!it->second.empty()) {
                     check_dupes(it->second);
                     if(!it->second.data().empty() && comment) // top_level_key with comment
-                      continue;
+                        continue;
                     if (!it->second.data().empty())
                         BOOST_PROPERTY_TREE_THROW(ini_parser_error(
                             "mixed data and children", "", 0));
@@ -378,6 +237,154 @@ namespace boost { namespace property_tree { namespace ini_parser
                     write_keys(stream, it->second, true, commentKey, commentStart, it->first);
                 }
             }
+        }
+    }
+
+    /**
+     * Read INI from a the given stream and translate it to a property tree.
+     * @note Clears existing contents of property tree. In case of error
+     *       the property tree is not modified.
+     * @throw ini_parser_error If a format violation is found.
+     * @param stream Stream from which to read in the property tree.
+     * @param[out] pt The property tree to populate.
+     *
+     * Key comments will be stored in the propertyTree as a child of actual property
+     * in an additional entry \c key.inicomment (wie von comment_key() returned)
+     * Section comments will be stored in the propertyTree as a child of section first property
+     * in an additional entry \c key.inicomment_section (wie von section_comment_key() returned)
+     */
+    template<class Ptree>
+    void read_ini(std::basic_istream<
+                    typename Ptree::key_type::value_type> &stream,
+                  Ptree &pt)
+    {
+        typedef typename Ptree::key_type Str;
+        typedef typename Str::value_type Ch;
+        const Ch semicolon = stream.widen(';');
+        const Ch hash = detail::comment_start_character<Ch>();
+        const Ch lbracket = stream.widen('[');
+        const Ch rbracket = stream.widen(']');
+        const Str commentKey = detail::comment_key<Str>();
+        const Str sectionCommentKey = detail::section_comment_key<Str>();
+
+        Ptree local;
+        unsigned long line_no = 0;
+        Ptree *section = 0;
+        Str line;
+        Str lastComment;
+        Str sectionComment;
+
+        // For all lines
+        while (stream.good())
+        {
+
+            // Get line from stream
+            ++line_no;
+            std::getline(stream, line);
+            if (!stream.good() && !stream.eof())
+                BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                    "read error", "", line_no));
+
+            // If line is non-empty
+            line = property_tree::detail::trim(line, stream.getloc());
+            if (!line.empty())
+            {
+                // Comment, section or key?
+                if (line[0] == semicolon || line[0] == hash)
+                {
+                    // Save comments to intermediate storage
+                    if (!lastComment.empty())
+                        lastComment += Ch('\n');
+                    lastComment += line.substr(1);
+                }
+                else if (line[0] == lbracket)
+                {
+                    // If the previous section was empty, drop it again.
+                    if (section && section->empty())
+                        local.pop_back();
+                    typename Str::size_type end = line.find(rbracket);
+                    if (end == Str::npos)
+                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                            "unmatched '['", "", line_no));
+                    Str key = property_tree::detail::trim(
+                        line.substr(1, end - 1), stream.getloc());
+                    if (local.find(key) != local.not_found())
+                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                            "duplicate section name", "", line_no));
+                    section = &local.push_back(
+                        std::make_pair(key, Ptree()))->second;
+                    if (!lastComment.empty())
+                    {
+                        sectionComment = lastComment;
+                        lastComment.clear();
+                    }
+                }
+                else
+                {
+                    Ptree &container = section ? *section : local;
+                    typename Str::size_type eqpos = line.find(Ch('='));
+                    if (eqpos == Str::npos)
+                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                            "'=' character not found in line", "", line_no));
+                    if (eqpos == 0)
+                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                            "key expected", "", line_no));
+                    Str key = property_tree::detail::trim(
+                        line.substr(0, eqpos), stream.getloc());
+                    Str data = property_tree::detail::trim(
+                        line.substr(eqpos + 1, Str::npos), stream.getloc());
+                    if (container.find(key) != container.not_found())
+                        BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                            "duplicate key name", "", line_no));
+                    Ptree* keyTree = &container.push_back(std::make_pair(key, Ptree(data)))->second;
+                    if (!lastComment.empty())
+                    {
+                        keyTree->put(commentKey, lastComment);
+                        lastComment.clear();
+                    }
+                    if(!sectionComment.empty())
+                    {
+                        keyTree->put(sectionCommentKey, sectionComment);
+                        sectionComment.clear();
+                    }
+                }
+            }
+        }
+        // If the last section was empty, drop it again.
+        if (section && section->empty())
+            local.pop_back();
+
+        // Swap local ptree with result ptree
+        pt.swap(local);
+
+    }
+
+    /**
+     * Read INI from a the given file and translate it to a property tree.
+     * @note Clears existing contents of property tree.  In case of error the
+     *       property tree unmodified.
+     * @throw ini_parser_error In case of error deserializing the property tree.
+     * @param filename Name of file from which to read in the property tree.
+     * @param[out] pt The property tree to populate.
+     * @param loc The locale to use when reading in the file contents.
+     */
+    template<class Ptree>
+    void read_ini(const std::string &filename,
+                  Ptree &pt,
+                  const std::locale &loc = std::locale())
+    {
+        std::basic_ifstream<typename Ptree::key_type::value_type>
+            stream(filename.c_str());
+        if (!stream)
+            BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                "cannot open file", filename, 0));
+        stream.imbue(loc);
+        try {
+            read_ini(stream, pt);
+        }
+        catch (ini_parser_error &e) {
+            BOOST_PROPERTY_TREE_THROW(ini_parser_error(
+                e.message(), filename, e.line()));
         }
     }
 
@@ -406,8 +413,8 @@ namespace boost { namespace property_tree { namespace ini_parser
         BOOST_ASSERT(validate_flags(flags));
         (void)flags;
 
-        const typename Ptree::key_type commentKey = comment_key<typename Ptree::key_type>();
-        const typename Ptree::key_type::value_type commentStart = comment_start_character<typename Ptree::key_type::value_type>();
+        const typename Ptree::key_type commentKey = detail::comment_key<typename Ptree::key_type>();
+        const typename Ptree::key_type::value_type commentStart = detail::comment_start_character<typename Ptree::key_type::value_type>();
 
         if (!pt.data().empty())
             BOOST_PROPERTY_TREE_THROW(ini_parser_error(
