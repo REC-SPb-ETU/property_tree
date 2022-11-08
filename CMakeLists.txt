@@ -78,7 +78,7 @@ else()
     # e.g. for packaging or added with add_subdirectory.
     #
     find_package(Boost REQUIRED
-            #COMPONENTS container system
+            COMPONENTS container system serialization
             )
     target_link_libraries(boost_property_tree
         INTERFACE

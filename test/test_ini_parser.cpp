@@ -20,14 +20,14 @@ using namespace boost::property_tree;
 // Correct data
 const char *ok_data_1 = 
     "\n"
-    "; Comment\n"
+    "; Comment section\n"
     "[Section1]\n"
     "\t   \t; Comment\n"
     "  Key1=Data1\n"
     "            \n"
     "   Key2   =   Data2\n"
     "Key 3     =      Data 3  \n"
-    "Key4=Data4\n"
+    "Key4=Data4 #comment\n"
     "[Section2] ;Comment\n"
     "\t   \tKey1=Data4\n";
 
@@ -46,17 +46,33 @@ const char *ok_data_4 =
 
 // Correct data
 const char *ok_data_5 = 
+    "# Comment\n"
     "Key1=Data1\n"             // No section
     "Key2=Data2\n";
 
-// Treat # as comment.
+// Treat # as section comment.
 const char *ok_data_6 =
     "# Comment\n"
     "[Section1]\n"
     "Key1=Data1\n";
 
+// Treat # as key comment.
+const char *ok_data_7 =
+    "[Section1]\n"
+    "# Comment\n"
+    "Key1=Data1\n";
+
+// Multiline comments
+const char *ok_data_8 =
+    "# Comment section string1\n"
+    "# Comment section string2\n"
+    "[Section1]\n"
+    "# Comment key string1\n"
+    "# Comment key string2\n"
+    "Key1=Data1\n";
+
 // Erroneous data
-const char *error_data_1 = 
+const char *error_data_1 =
     "[Section1]\n"
     "Key1\n"                   // No equals sign
     "Key2=Data2";
@@ -66,6 +82,13 @@ const char *error_data_2 =
     "[Section1]\n"
     "Key1=Data1\n"
     "=Data2\n";                // No key
+
+// Erroneous data
+const char *error_data_3 =
+    "# This is a comment\n"
+    "This isn't a comment\n"    //No # or ;
+    "[Section1]\n"
+    "Key1=Data1\n";
 
 struct ReadFunc
 {
@@ -108,38 +131,50 @@ void test_ini_parser()
 {
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_1, NULL, 
-        "testok1.ini", NULL, "testok1out.ini", 8, 26, 37
+        ReadFunc(), WriteFunc(), ok_data_1, NULL,
+        "testok1.ini", NULL, "testok1out.ini", 10, 59, 65
     );
     
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_2, NULL, 
+        ReadFunc(), WriteFunc(), ok_data_2, NULL,
         "testok2.ini", NULL, "testok2out.ini", 3, 5, 12
     );
 
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_3, NULL, 
+        ReadFunc(), WriteFunc(), ok_data_3, NULL,
         "testok3.ini", NULL, "testok3out.ini", 1, 0, 0
     );
 
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_4, NULL, 
+        ReadFunc(), WriteFunc(), ok_data_4, NULL,
         "testok4.ini", NULL, "testok4out.ini", 1, 0, 0
     );
 
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_5, NULL, 
-        "testok5.ini", NULL, "testok5out.ini", 3, 10, 8
+        ReadFunc(), WriteFunc(), ok_data_5, NULL,
+        "testok5.ini", NULL, "testok5out.ini", 4, 18, 18
     );
 
     generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
     (
-        ReadFunc(), WriteFunc(), ok_data_6, NULL, 
-        "testok6.ini", NULL, "testok6out.ini", 3, 5, 12
+        ReadFunc(), WriteFunc(), ok_data_6, NULL,
+        "testok6.ini", NULL, "testok6out.ini", 4, 13, 30
+    );
+
+    generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
+    (
+        ReadFunc(), WriteFunc(), ok_data_7, NULL,
+        "testok7.ini", NULL, "testok7out.ini", 4, 13, 22
+    );
+
+    generic_parser_test_ok<Ptree, ReadFunc, WriteFunc>
+    (
+        ReadFunc(), WriteFunc(), ok_data_8, NULL,
+        "testok8.ini", NULL, "testok8out.ini", 5, 95, 40
     );
 
     generic_parser_test_error<Ptree, ReadFunc, WriteFunc, ini_parser_error>
@@ -152,6 +187,12 @@ void test_ini_parser()
     (
         ReadFunc(), WriteFunc(), error_data_2, NULL,
         "testerr2.ini", NULL, "testerr2out.ini", 3
+    );
+
+    generic_parser_test_error<Ptree, ReadFunc, WriteFunc, ini_parser_error>
+    (
+        ReadFunc(), WriteFunc(), error_data_3, NULL,
+        "testerr3.ini", NULL, "testerr3out.ini", 2
     );
 }
 
