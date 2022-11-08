@@ -168,7 +168,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                 boost::optional<Str> comment = it->second.template get_optional<Str>(commentKey);
                 boost::optional<Str> sectionComment = it->second.template get_optional<Str>(sectionCommentKey);
 
-                int commentCount = bool(comment) + bool(sectionComment);
+                const typename Ptree::size_type commentCount = bool(comment) + bool(sectionComment);
                 if (it->second.size() != commentCount) {
                     //only two depth-levels are allowed in INI-files ... but we also have to filter out the additional .comment nodes
                     if (throw_on_children) {
