@@ -156,7 +156,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                                   bool throw_on_children,
                                   const typename Ptree::key_type& commentKey,
                                   const typename Ptree::key_type::value_type& commentStart,
-                                  const typename Ptree::key_type& sectionName = {})
+                                  const typename boost::optional<typename Ptree::key_type>& sectionName = {})
         {
             typedef typename Ptree::key_type::value_type Ch;
             typedef typename Ptree::key_type Str;
@@ -179,7 +179,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                 }
 
                 // first parameter of section, write section
-                if (it == pt.begin() && sectionName != Str{})
+                if (it == pt.begin() && sectionName.has_value())
                 {
                     // empty lines in front of a new section to better separate it from other sections
                     if (stream.tellp() != 0)
@@ -188,7 +188,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                     if (sectionComment)
                         write_comment<Ptree>(stream, *sectionComment, commentStart);
 
-                    stream << Ch('[') << sectionName << Ch(']') << Ch('\n');
+                    stream << Ch('[') << *sectionName << Ch(']') << Ch('\n');
                 }
                 // write parameter
                 if (comment)
