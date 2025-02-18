@@ -271,6 +271,31 @@ void test_empty_name_section()
   BOOST_TEST(output == input);
 }
 
+void test_duplicate_empty_name_section()
+{
+  std::stringstream stringStreamInput;
+  stringStreamInput << "[]" << std::endl;
+  stringStreamInput << "empty_section_key = 1" << std::endl;
+  stringStreamInput <<  std::endl;
+  stringStreamInput << "[]" << std::endl;
+  stringStreamInput << "empty_section_value = 2" << std::endl;
+  stringStreamInput <<  std::endl;
+  stringStreamInput << "[section]" << std::endl;
+  stringStreamInput << "section_key = 1" << std::endl;
+  stringStreamInput.clear();
+  stringStreamInput.seekg(0, std::ios_base::beg);
+  ptree result;
+  read_ini(stringStreamInput, result);
+  BOOST_TEST(result.get(".empty_section_key", "bad") == "1");
+  BOOST_TEST(result.get(".empty_section_value", "bad") == "2");
+  BOOST_TEST(result.get("section.section_key", "bad") == "1");
+  std::stringstream stringStreamOutput;
+  write_ini(stringStreamOutput, result);
+  std::string input = stringStreamInput.str();
+  std::string output = stringStreamOutput.str();
+  BOOST_TEST(output == input);
+}
+
 int main()
 {
     test_ini_parser<ptree>();
