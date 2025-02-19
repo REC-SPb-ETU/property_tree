@@ -14,6 +14,8 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/detail/ptree_utils.hpp>
 #include <boost/property_tree/detail/file_parser_error.hpp>
+#include <boost/optional.hpp>
+
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -179,7 +181,7 @@ namespace boost { namespace property_tree { namespace ini_parser
                 }
 
                 // first parameter of section, write section
-                if (it == pt.begin() && sectionName.has_value())
+                if (it == pt.begin() && sectionName)
                 {
                     // empty lines in front of a new section to better separate it from other sections
                     if (stream.tellp() != 0)
