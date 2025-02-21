@@ -67,7 +67,7 @@ elseif(BOOST_PROPERTY_TREE_IN_BOOST_TREE)
     get_filename_component(BOOST_ROOT ../.. ABSOLUTE)
     set(BOOST_INCLUDEDIR ${BOOST_ROOT})
     set(BOOST_LIBRARYDIR ${BOOST_ROOT}/stage/lib)
-    find_package(Boost COMPONENTS serialization unit_test_framework REQUIRED)
+    find_package(Boost COMPONENTS serialization REQUIRED)
 
     target_include_directories(boost_property_tree INTERFACE ${BOOST_ROOT})
     target_link_directories(boost_property_tree INTERFACE ${BOOST_ROOT}/stage/lib)
@@ -78,7 +78,7 @@ else()
     # e.g. for packaging or added with add_subdirectory.
     #
     find_package(Boost REQUIRED
-            COMPONENTS container system serialization unit_test_framework
+            COMPONENTS container system serialization
             )
     target_link_libraries(boost_property_tree
         INTERFACE
