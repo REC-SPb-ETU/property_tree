@@ -10,6 +10,7 @@
 
 #include "test_utils.hpp"
 #include <boost/property_tree/ini_parser.hpp>
+#include <boost/test/unit_test.hpp>
 #include <sstream>
 
 using namespace boost::property_tree;
@@ -250,6 +251,42 @@ void test_other_trees()
     }
 }
 
+void test_empty_name_section()
+{
+  std::stringstream stringStreamInput;
+  stringStreamInput << "[]" << std::endl;
+  stringStreamInput << "empty_section_key = 1" << std::endl;
+  stringStreamInput <<  std::endl;
+  stringStreamInput << "[section]" << std::endl;
+  stringStreamInput << "section_key = 1" << std::endl;
+  stringStreamInput.clear();
+  stringStreamInput.seekg(0, std::ios_base::beg);
+  ptree result;
+  read_ini(stringStreamInput, result);
+  BOOST_TEST(result.get(".empty_section_key", "bad") == "1");
+  BOOST_TEST(result.get("section.section_key", "bad") == "1");
+  std::stringstream stringStreamOutput;
+  write_ini(stringStreamOutput, result);
+  std::string input = stringStreamInput.str();
+  std::string output = stringStreamOutput.str();
+  BOOST_TEST(output == input);
+}
+
+void test_duplicate_empty_name_section()
+{
+  std::stringstream stringStreamInput;
+  stringStreamInput << "[]" << std::endl;
+  stringStreamInput << "empty_section_key = 1" << std::endl;
+  stringStreamInput <<  std::endl;
+  stringStreamInput << "[]" << std::endl;
+  stringStreamInput << "empty_section_value = 2" << std::endl;
+  stringStreamInput <<  std::endl;
+  stringStreamInput.clear();
+  stringStreamInput.seekg(0, std::ios_base::beg);
+  ptree result;
+  BOOST_CHECK_THROW(read_ini(stringStreamInput, result), ini_parser_error);
+}
+
 int main()
 {
     test_ini_parser<ptree>();
@@ -261,7 +298,8 @@ int main()
 
     test_unmappable_trees();
     test_other_trees();
- 
+    test_empty_name_section();
+    test_duplicate_empty_name_section();
     return boost::report_errors();
 
 }
